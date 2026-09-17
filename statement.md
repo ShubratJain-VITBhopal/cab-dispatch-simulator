@@ -177,16 +177,3 @@ The persistence layer connects to `jdbc:sqlite:cab_dispatch.db` and manages two 
 * **Deterministic Resource Deallocation**: Uses Java `try-finally` semantics to guarantee that every assigned driver is released, eliminating resource leaks under abnormal termination.
 * **Zero External Server Overhead**: Uses embedded SQLite; requires no separate database daemon installation or network port bindings.
 * **Portability**: Verified to compile and execute uniformly across Windows, Linux, and macOS platforms.
-
----
-
-## 7. Technical Defense & Viva Voce Q&A
-
-### Q1: Why use `synchronized` instead of `ConcurrentHashMap`?
-> *"`ConcurrentHashMap` provides thread-safe operations for single read or put actions, but it does NOT provide atomicity across a multi-step Check-Then-Act sequence (checking if status is AVAILABLE, selecting the driver, and setting status to BUSY). Using `synchronized` on `DriverPool` ensures that the entire discovery and assignment sequence executes as one indivisible critical section."*
-
-### Q2: What prevents driver starvation or deadlocks?
-> *"Deadlocks require circular wait conditions across multiple locks. Our design uses a single monitor lock on `DriverPool`, entirely eliminating lock ordering cycles. Furthermore, driver release is enclosed inside a `finally` block in `RiderRequestThread`, ensuring that even if a thread is interrupted or throws an exception, the driver is guaranteed to return to the pool."*
-
-### Q3: How is dynamic pricing calculated and capped?
-> *"The multiplier is calculated as `Active Requests / Available Drivers`. If demand is less than or equal to supply, it defaults to 1.0x (base rate). If supply hits zero or demand spikes heavily, the ratio is clamped at a maximum ceiling of 3.0x using `Math.min(ratio, 3.0)` to protect riders from predatory price inflation."*
